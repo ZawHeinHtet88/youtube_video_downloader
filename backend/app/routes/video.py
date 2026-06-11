@@ -12,7 +12,7 @@ from app.models import (
     TaskInfo,
     ProgressData,
 )
-from app.services.ytdlp import extract_info, download_video
+from app.services.ytdlp import extract_info, download_video, _writable_cookies
 from app.services.task_manager import task_manager
 from app.config import settings
 
@@ -29,10 +29,16 @@ async def debug():
     cookies_path = settings.youtube_cookies_path
     cookies_exist = cookies_path and Path(cookies_path).exists()
     cookies_size = Path(cookies_path).stat().st_size if cookies_exist else 0
+    writable = _writable_cookies
+    writable_exist = writable and Path(writable).exists()
+    writable_size = Path(writable).stat().st_size if writable_exist else 0
     return {
         "cookies_path": cookies_path,
         "cookies_exist": cookies_exist,
         "cookies_size_bytes": cookies_size,
+        "writable_cookies": writable,
+        "writable_cookies_exist": writable_exist,
+        "writable_cookies_size": writable_size,
         "download_dir": str(settings.download_dir),
     }
 

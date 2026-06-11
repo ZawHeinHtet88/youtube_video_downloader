@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import re
 import shutil
 from pathlib import Path
@@ -7,6 +8,8 @@ import yt_dlp
 
 from app.config import settings
 from app.models import VideoFormat, VideoInfoResponse
+
+log = logging.getLogger("ytdlp")
 
 PLAYER_CLIENTS = [
     ["web", "mweb", "tv"],
@@ -23,10 +26,12 @@ _writable_cookies: str = ""
 def _init_cookies():
     global _writable_cookies
     src = settings.youtube_cookies_path
+    log.info("Cookie init: src=%s exists=%s", src, Path(src).exists() if src else False)
     if src and Path(src).exists():
         dest = settings.download_dir / "cookies.txt"
         shutil.copy2(src, dest)
         _writable_cookies = str(dest)
+        log.info("Cookies copied to %s size=%d", _writable_cookies, dest.stat().st_size)
 
 
 def _clean_url(url: str) -> str:
@@ -38,7 +43,9 @@ def _clean_url(url: str) -> str:
 
 
 def _has_cookies() -> bool:
-    return _writable_cookies and Path(_writable_cookies).exists()
+    result = _writable_cookies and Path(_writable_cookies).exists()
+    log.info("has_cookies=%s path=%s", result, _writable_cookies)
+    return result
 
 
 def _get_opts(clients: list[str] | None = None) -> dict:
