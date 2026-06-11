@@ -19,6 +19,7 @@ PLAYER_CLIENTS = [
 def _clean_url(url: str) -> str:
     url = re.sub(r"[?&]list=RD[A-Za-z0-9_-]+", "", url)
     url = re.sub(r"[?&]index=\d+", "", url)
+    url = re.sub(r"[?&]si=[A-Za-z0-9_-]+", "", url)
     url = url.rstrip("?&")
     return url
 
