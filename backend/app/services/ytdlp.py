@@ -4,6 +4,7 @@ from pathlib import Path
 
 import yt_dlp
 
+from app.config import settings
 from app.models import VideoFormat, VideoInfoResponse
 
 
@@ -14,16 +15,24 @@ def _clean_url(url: str) -> str:
     return url
 
 
+def _get_base_opts() -> dict:
+    opts = {
+        "quiet": True,
+        "no_warnings": True,
+        "noplaylist": True,
+    }
+    cookies_path = settings.youtube_cookies_path
+    if cookies_path and Path(cookies_path).exists():
+        opts["cookiefile"] = cookies_path
+    return opts
+
+
 async def extract_info(url: str) -> VideoInfoResponse:
     url = _clean_url(url)
 
     def _extract():
-        opts = {
-            "quiet": True,
-            "no_warnings": True,
-            "skip_download": True,
-            "noplaylist": True,
-        }
+        opts = _get_base_opts()
+        opts["skip_download"] = True
         with yt_dlp.YoutubeDL(opts) as ydl:
             return ydl.extract_info(url, download=False)
 
@@ -130,15 +139,13 @@ async def download_video(
 
     fmt_str = f"{format_id}+bestaudio/best" if format_id != "best" else "best"
 
-    opts = {
+    opts = _get_base_opts()
+    opts.update({
         "format": fmt_str,
         "outtmpl": str(output_dir / "%(title)s [%(id)s].%(ext)s"),
         "merge_output_format": "mp4",
         "progress_hooks": [progress_hook],
-        "quiet": True,
-        "no_warnings": True,
-        "noplaylist": True,
-    }
+    })
 
     await _emit("extracting", percent=0)
 

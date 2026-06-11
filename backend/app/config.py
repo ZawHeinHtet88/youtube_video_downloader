@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     max_concurrent_downloads: int = 3
     file_cleanup_hours: int = 24
     cors_origins: list[str] = ["*"]
+    youtube_cookies_path: str = ""
 
     model_config = {"env_prefix": "IDM_"}
 
