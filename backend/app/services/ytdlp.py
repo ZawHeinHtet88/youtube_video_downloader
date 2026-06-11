@@ -9,11 +9,12 @@ from app.config import settings
 from app.models import VideoFormat, VideoInfoResponse
 
 PLAYER_CLIENTS = [
-    "web",
-    "mweb",
-    "tv",
-    "tv_embedded",
-    "mediaconnect",
+    ["web", "mweb", "tv"],
+    ["tv_embedded", "mediaconnect"],
+    ["web"],
+    ["mweb"],
+    ["tv"],
+    ["mediaconnect"],
 ]
 
 _writable_cookies: str = ""
@@ -36,41 +37,53 @@ def _clean_url(url: str) -> str:
     return url
 
 
-def _get_base_opts(clients: list[str] | None = None) -> dict:
+def _has_cookies() -> bool:
+    return _writable_cookies and Path(_writable_cookies).exists()
+
+
+def _get_opts(clients: list[str] | None = None) -> dict:
     opts = {
         "quiet": True,
         "no_warnings": True,
         "noplaylist": True,
         "force_ipv4": True,
-        "extractor_args": {
-            "youtube": {
-                "player_client": clients or PLAYER_CLIENTS[:3],
-            }
-        },
         "http_headers": {
             "Accept-Language": "en-US,en;q=0.9",
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
         },
     }
-    if _writable_cookies and Path(_writable_cookies).exists():
+    if _has_cookies():
         opts["cookiefile"] = _writable_cookies
+    elif clients:
+        opts["extractor_args"] = {"youtube": {"player_client": clients}}
     return opts
 
 
 async def extract_info(url: str) -> VideoInfoResponse:
     url = _clean_url(url)
 
-    last_error = None
-
-    for client_combo in _client_combos():
+    if _has_cookies():
         try:
             def _extract():
-                opts = _get_base_opts(clients=client_combo)
+                opts = _get_opts()
                 opts["skip_download"] = True
                 with yt_dlp.YoutubeDL(opts) as ydl:
                     return ydl.extract_info(url, download=False)
-
             info = await asyncio.to_thread(_extract)
+            return _parse_formats(info)
+        except Exception as e:
+            if "Sign in to confirm" not in str(e):
+                raise
+
+    last_error = None
+    for client_combo in PLAYER_CLIENTS:
+        try:
+            def _extract_fb():
+                opts = _get_opts(clients=client_combo)
+                opts["skip_download"] = True
+                with yt_dlp.YoutubeDL(opts) as ydl:
+                    return ydl.extract_info(url, download=False)
+            info = await asyncio.to_thread(_extract_fb)
             return _parse_formats(info)
         except Exception as e:
             last_error = e
@@ -79,17 +92,6 @@ async def extract_info(url: str) -> VideoInfoResponse:
             raise
 
     raise last_error
-
-
-def _client_combos() -> list[list[str]]:
-    return [
-        ["web", "mweb", "tv"],
-        ["tv_embedded", "mediaconnect"],
-        ["web"],
-        ["mweb"],
-        ["tv"],
-        ["mediaconnect"],
-    ]
 
 
 def _parse_formats(info: dict) -> VideoInfoResponse:
@@ -192,36 +194,60 @@ async def download_video(
             )
 
     loop = asyncio.get_event_loop()
-
     fmt_str = f"{format_id}+bestaudio/best" if format_id != "best" else "best"
 
-    last_error = None
-
-    for client_combo in _client_combos():
-        opts = _get_base_opts(clients=client_combo)
+    if _has_cookies():
+        opts = _get_opts()
         opts.update({
             "format": fmt_str,
             "outtmpl": str(output_dir / "%(title)s [%(id)s].%(ext)s"),
             "merge_output_format": "mp4",
             "progress_hooks": [progress_hook],
         })
-
         await _emit("extracting", percent=0)
-
         result_file: str = ""
-
-        def _download():
-            nonlocal result_file
-            with yt_dlp.YoutubeDL(opts) as ydl:
-                info = ydl.extract_info(url, download=True)
-                result_file = ydl.prepare_filename(info)
-                if not result_file.endswith(".mp4"):
-                    mp4 = result_file.rsplit(".", 1)[0] + ".mp4"
-                    if Path(mp4).exists():
-                        result_file = mp4
-
         try:
+            def _download():
+                nonlocal result_file
+                with yt_dlp.YoutubeDL(opts) as ydl:
+                    info = ydl.extract_info(url, download=True)
+                    result_file = ydl.prepare_filename(info)
+                    if not result_file.endswith(".mp4"):
+                        mp4 = result_file.rsplit(".", 1)[0] + ".mp4"
+                        if Path(mp4).exists():
+                            result_file = mp4
             await asyncio.to_thread(_download)
+            return result_file
+        except yt_dlp.utils.DownloadCancelled:
+            await _emit("cancelled")
+            raise
+        except Exception as e:
+            if "Sign in to confirm" not in str(e):
+                await _emit("failed", error=str(e))
+                raise
+
+    last_error = None
+    for client_combo in PLAYER_CLIENTS:
+        opts = _get_opts(clients=client_combo)
+        opts.update({
+            "format": fmt_str,
+            "outtmpl": str(output_dir / "%(title)s [%(id)s].%(ext)s"),
+            "merge_output_format": "mp4",
+            "progress_hooks": [progress_hook],
+        })
+        await _emit("extracting", percent=0)
+        result_file = ""
+        try:
+            def _download_fb():
+                nonlocal result_file
+                with yt_dlp.YoutubeDL(opts) as ydl:
+                    info = ydl.extract_info(url, download=True)
+                    result_file = ydl.prepare_filename(info)
+                    if not result_file.endswith(".mp4"):
+                        mp4 = result_file.rsplit(".", 1)[0] + ".mp4"
+                        if Path(mp4).exists():
+                            result_file = mp4
+            await asyncio.to_thread(_download_fb)
             return result_file
         except yt_dlp.utils.DownloadCancelled:
             await _emit("cancelled")
