@@ -1,0 +1,15 @@
+version: "3.8"
+
+services:
+  backend:
+    build: .
+    container_name: idm-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - IDM_DOWNLOAD_DIR=/app/downloads
+      - IDM_BACKEND_HOST=0.0.0.0
+      - IDM_BACKEND_PORT=8000
+    volumes:
+      - ./downloads:/app/downloads
+    restart: unless-stopped
