@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 import asyncio
 import json
+from pathlib import Path
 
 from app.models import (
     VideoInfoRequest,
@@ -21,6 +22,19 @@ router = APIRouter()
 @router.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@router.get("/api/debug")
+async def debug():
+    cookies_path = settings.youtube_cookies_path
+    cookies_exist = cookies_path and Path(cookies_path).exists()
+    cookies_size = Path(cookies_path).stat().st_size if cookies_exist else 0
+    return {
+        "cookies_path": cookies_path,
+        "cookies_exist": cookies_exist,
+        "cookies_size_bytes": cookies_size,
+        "download_dir": str(settings.download_dir),
+    }
 
 
 @router.post("/api/video/info", response_model=VideoInfoResponse)
