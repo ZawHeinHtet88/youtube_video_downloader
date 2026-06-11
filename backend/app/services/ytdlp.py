@@ -1,5 +1,6 @@
 import asyncio
 import re
+import shutil
 from pathlib import Path
 
 import yt_dlp
@@ -14,6 +15,17 @@ PLAYER_CLIENTS = [
     "tv_embedded",
     "mediaconnect",
 ]
+
+_writable_cookies: str = ""
+
+
+def _init_cookies():
+    global _writable_cookies
+    src = settings.youtube_cookies_path
+    if src and Path(src).exists():
+        dest = settings.download_dir / "cookies.txt"
+        shutil.copy2(src, dest)
+        _writable_cookies = str(dest)
 
 
 def _clean_url(url: str) -> str:
@@ -40,9 +52,8 @@ def _get_base_opts(clients: list[str] | None = None) -> dict:
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
         },
     }
-    cookies_path = settings.youtube_cookies_path
-    if cookies_path and Path(cookies_path).exists():
-        opts["cookiefile"] = cookies_path
+    if _writable_cookies and Path(_writable_cookies).exists():
+        opts["cookiefile"] = _writable_cookies
     return opts
 
 

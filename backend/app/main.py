@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.routes.video import router as video_router
+from app.services.ytdlp import _init_cookies
 
 app = FastAPI(
     title="Internet Download Manager API",
@@ -19,3 +20,8 @@ app.add_middleware(
 )
 
 app.include_router(video_router)
+
+
+@app.on_event("startup")
+def on_startup():
+    _init_cookies()
