@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 import asyncio
 import json
+import re
 from pathlib import Path
 
 from app.models import (
@@ -11,12 +12,16 @@ from app.models import (
     DownloadTaskResponse,
     TaskInfo,
     ProgressData,
+    CookieRequest,
+    CookieStatus,
 )
-from app.services.ytdlp import extract_info, download_video, _writable_cookies
+from app.services.ytdlp import extract_info, download_video
 from app.services.task_manager import task_manager
 from app.config import settings
 
 router = APIRouter()
+
+COOKIES_FILE = settings.download_dir / "cookies.txt"
 
 
 @router.get("/health")
@@ -24,23 +29,30 @@ async def health():
     return {"status": "ok"}
 
 
-@router.get("/api/debug")
-async def debug():
-    cookies_path = settings.youtube_cookies_path
-    cookies_exist = cookies_path and Path(cookies_path).exists()
-    cookies_size = Path(cookies_path).stat().st_size if cookies_exist else 0
-    writable = _writable_cookies
-    writable_exist = writable and Path(writable).exists()
-    writable_size = Path(writable).stat().st_size if writable_exist else 0
-    return {
-        "cookies_path": cookies_path,
-        "cookies_exist": cookies_exist,
-        "cookies_size_bytes": cookies_size,
-        "writable_cookies": writable,
-        "writable_cookies_exist": writable_exist,
-        "writable_cookies_size": writable_size,
-        "download_dir": str(settings.download_dir),
-    }
+@router.get("/api/cookies", response_model=CookieStatus)
+async def get_cookie_status():
+    exists = COOKIES_FILE.exists()
+    return CookieStatus(
+        has_cookies=exists,
+        size_bytes=COOKIES_FILE.stat().st_size if exists else 0,
+    )
+
+
+@router.post("/api/cookies", response_model=CookieStatus)
+async def set_cookies(req: CookieRequest):
+    content = req.cookies.strip()
+    if not content:
+        raise HTTPException(status_code=400, detail="Cookies content is empty")
+
+    if not content.startswith("# Netscape"):
+        raise HTTPException(status_code=400, detail="Invalid cookie format. Must be Netscape HTTP Cookie File format exported from browser extension.")
+
+    COOKIES_FILE.write_text(content, encoding="utf-8")
+
+    return CookieStatus(
+        has_cookies=True,
+        size_bytes=COOKIES_FILE.stat().st_size,
+    )
 
 
 @router.post("/api/video/info", response_model=VideoInfoResponse)
@@ -109,12 +121,10 @@ async def download_file(task_id: str):
     if task.status != "completed" or not task.filename:
         raise HTTPException(status_code=400, detail="File not ready")
 
-    from pathlib import Path
     filepath = Path(task.filename)
     if not filepath.exists():
         raise HTTPException(status_code=404, detail="File not found on server")
 
-    import re
     safe_name = re.sub(r'[<>:"/\\|?*]', '_', filepath.name)
 
     return FileResponse(

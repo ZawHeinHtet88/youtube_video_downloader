@@ -48,3 +48,12 @@ class TaskInfo(BaseModel):
     status: str
     filename: str | None = None
     created_at: float
+
+
+class CookieRequest(BaseModel):
+    cookies: str
+
+
+class CookieStatus(BaseModel):
+    has_cookies: bool
+    size_bytes: int

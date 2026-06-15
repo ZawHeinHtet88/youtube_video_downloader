@@ -47,6 +47,10 @@ export function HomeScreen({ navigation }: Props) {
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
+      <TouchableOpacity style={styles.settingsBtn} onPress={() => navigation.navigate("Settings")}>
+        <Text style={styles.settingsBtnText}>Settings</Text>
+      </TouchableOpacity>
+
       <Text style={styles.label}>Paste YouTube URL</Text>
       <TextInput
         style={styles.input}
@@ -96,6 +100,8 @@ export function HomeScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, paddingTop: 60 },
+  settingsBtn: { alignSelf: "flex-end", marginBottom: 16 },
+  settingsBtnText: { color: "#888", fontSize: 13 },
   label: { color: "#eee", fontSize: 16, marginBottom: 8 },
   input: {
     backgroundColor: "#1e1e3a",

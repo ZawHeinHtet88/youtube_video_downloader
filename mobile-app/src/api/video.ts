@@ -42,3 +42,20 @@ export function getFileUrl(taskId: string): string {
 export function getProgressUrl(taskId: string): string {
   return `${api.defaults.baseURL}/api/download/${taskId}/progress`;
 }
+
+export interface CookieStatus {
+  has_cookies: boolean;
+  size_bytes: number;
+}
+
+export async function getCookieStatus(): Promise<CookieStatus> {
+  const { data } = await api.get<CookieStatus>("/api/cookies");
+  return data;
+}
+
+export async function uploadCookies(cookieText: string): Promise<CookieStatus> {
+  const { data } = await api.post<CookieStatus>("/api/cookies", {
+    cookies: cookieText,
+  });
+  return data;
+}

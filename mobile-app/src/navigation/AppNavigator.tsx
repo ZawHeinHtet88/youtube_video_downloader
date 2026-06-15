@@ -3,11 +3,13 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { HomeScreen } from "../features/home/HomeScreen";
 import { FormatScreen } from "../features/formats/FormatScreen";
 import { DownloadsScreen } from "../features/downloads/DownloadsScreen";
+import { SettingsScreen } from "../features/settings/SettingsScreen";
 
 export type RootStackParamList = {
   Home: undefined;
   Format: undefined;
   Downloads: undefined;
+  Settings: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -24,6 +26,7 @@ export function AppNavigator() {
       <Stack.Screen name="Home" component={HomeScreen} options={{ title: "YT Downloader" }} />
       <Stack.Screen name="Format" component={FormatScreen} options={{ title: "Select Quality" }} />
       <Stack.Screen name="Downloads" component={DownloadsScreen} options={{ title: "Downloads" }} />
+      <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: "Settings" }} />
     </Stack.Navigator>
   );
 }
