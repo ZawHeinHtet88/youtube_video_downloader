@@ -13,10 +13,19 @@ RUN pip install --no-cache-dir -r requirements.txt && \
     pip install --no-cache-dir --upgrade yt-dlp && \
     pip install --no-cache-dir bgutil-ytdlp-pot-provider
 
-RUN git clone --single-branch --depth 1 https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git /opt/bgutil && \
-    cd /opt/bgutil/server && \
+RUN mkdir -p /opt/bgutil && \
+    git clone --single-branch --depth 1 https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git /opt/bgutil/repo && \
+    cd /opt/bgutil/repo/server && \
     npm ci && \
-    npx tsc
+    npx tsc && \
+    cp -r /opt/bgutil/repo/server /opt/bgutil/server && \
+    mkdir -p /root/.yt-dlp/plugins && \
+    cp -r /opt/bgutil/repo/plugin/yt_dlp_plugins /root/.yt-dlp/plugins/
+
+RUN echo "node version:" && node --version && \
+    echo "yt-dlp plugins:" && ls -la /root/.yt-dlp/plugins/yt_dlp_plugins/extractor/ && \
+    python -c "import yt_dlp; print('yt-dlp:', yt_dlp.version.__version__)" && \
+    python -c "import yt_dlp_plugins.extractor.getpot_bgutil_script; print('plugin OK')"
 
 COPY . .
 

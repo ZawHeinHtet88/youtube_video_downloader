@@ -46,6 +46,7 @@ def _get_opts(clients: list[str] | None = None) -> dict:
         "no_warnings": True,
         "noplaylist": True,
         "force_ipv4": True,
+        "js_runtimes": {"node": {"cmd": ["node"]}},
         "extractor_args": {
             "youtube": {"player_client": clients or ["web"]},
             "youtubepot-bgutilscript": {"server_home": "/opt/bgutil/server"},
