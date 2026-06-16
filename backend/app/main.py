@@ -1,4 +1,5 @@
 import logging
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -7,10 +8,33 @@ from app.routes.video import router as video_router
 
 log = logging.getLogger("idm")
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    import yt_dlp
+    log.info("yt-dlp version: %s", yt_dlp.version.__version__)
+    log.info("Cookies file: %s", settings.download_dir / "cookies.txt")
+
+    try:
+        from app.services.ytdlp import start_pot_server
+        start_pot_server()
+    except Exception as e:
+        log.warning("Failed to start PO token server: %s", e)
+
+    yield
+
+    try:
+        from app.services.ytdlp import stop_pot_server
+        stop_pot_server()
+    except Exception:
+        pass
+
+
 app = FastAPI(
     title="Internet Download Manager API",
     version="1.0.0",
     description="YouTube video download backend powered by yt-dlp",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -22,22 +46,3 @@ app.add_middleware(
 )
 
 app.include_router(video_router)
-
-
-@app.on_event("startup")
-def on_startup():
-    import yt_dlp
-    log.info("yt-dlp version: %s", yt_dlp.version.__version__)
-    log.info("Cookies file: %s", settings.download_dir / "cookies.txt")
-
-    try:
-        from app.services.ytdlp import start_pot_server
-        start_pot_server()
-    except Exception as e:
-        log.warning("Failed to start PO token server: %s", e)
-
-
-@app.on_event("shutdown")
-def on_shutdown():
-    from app.services.ytdlp import stop_pot_server
-    stop_pot_server()
