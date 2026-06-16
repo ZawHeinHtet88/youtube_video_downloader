@@ -10,12 +10,15 @@ from app.config import settings
 from app.models import VideoFormat, VideoInfoResponse
 
 PLAYER_CLIENTS = [
+    ["tv_embedded", "android_vr"],
+    ["mediaconnect", "tv_embedded"],
     ["web", "mweb", "tv"],
-    ["tv_embedded", "mediaconnect"],
+    ["android_vr"],
+    ["tv_embedded"],
+    ["mediaconnect"],
     ["web"],
     ["mweb"],
     ["tv"],
-    ["mediaconnect"],
 ]
 
 COOKIES_FILE = settings.download_dir / "cookies.txt"
