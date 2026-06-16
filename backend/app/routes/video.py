@@ -56,13 +56,23 @@ async def debug():
     except Exception as e:
         result["pot_check_error"] = str(e)
 
-    # Test 1: Without cookies
+    # Test 1: Without cookies - verbose
     try:
+        import io
+        import logging
+
+        log_capture = io.StringIO()
+        handler = logging.StreamHandler(log_capture)
+        handler.setLevel(logging.DEBUG)
+        yt_dlp_logger = logging.getLogger("yt_dlp")
+        yt_dlp_logger.addHandler(handler)
+        yt_dlp_logger.setLevel(logging.DEBUG)
+
         opts = {
-            "quiet": True,
             "no_warnings": True,
             "skip_download": True,
             "force_ipv4": True,
+            "logger": yt_dlp_logger,
             "extractor_args": {
                 "youtube": {"player_client": ["web"]},
                 "youtubepot-bgutilscript": {"server_home": "/opt/bgutil/server"},
@@ -71,9 +81,11 @@ async def debug():
         with yt_dlp.YoutubeDL(opts) as ydl:
             info = ydl.extract_info("https://www.youtube.com/watch?v=nwVmxz44c1Y", download=False)
         result["test_no_cookies"] = f"SUCCESS: {info.get('title', '')[:50]}"
+        result["yt_dlp_log"] = log_capture.getvalue()[-1000:]
     except Exception as e:
         err = str(e)
         result["test_no_cookies_error"] = err[:300]
+        result["yt_dlp_log"] = log_capture.getvalue()[-1000:] if 'log_capture' in dir() else ""
 
     # Test 2: With cookies
     from app.services.ytdlp import COOKIES_FILE, _get_writable_cookies
