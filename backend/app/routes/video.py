@@ -33,6 +33,60 @@ async def health():
     }
 
 
+@router.get("/api/debug")
+async def debug():
+    import yt_dlp
+    import logging
+    import subprocess
+
+    result = {
+        "ytdlp_version": yt_dlp.version.__version__,
+        "pot_provider_installed": False,
+        "node_available": False,
+        "pot_server_home": "/opt/bgutil/server",
+    }
+
+    try:
+        r = subprocess.run(["node", "--version"], capture_output=True, text=True, timeout=5)
+        result["node_available"] = True
+        result["node_version"] = r.stdout.strip()
+    except Exception as e:
+        result["node_error"] = str(e)
+
+    try:
+        from pathlib import Path
+        result["pot_server_exists"] = Path("/opt/bgutil/server/build/main.js").exists()
+        result["pot_plugin_files"] = [
+            str(p) for p in Path("/opt/bgutil").rglob("*.py") if "pot" in str(p).lower()
+        ][:5]
+    except Exception as e:
+        result["pot_check_error"] = str(e)
+
+    # Try a quick yt-dlp verbose extract to see POT provider status
+    try:
+        opts = {
+            "quiet": True,
+            "no_warnings": True,
+            "skip_download": True,
+            "verbose": True,
+            "force_ipv4": True,
+            "extractor_args": {
+                "youtube": {"player_client": ["web"]},
+                "youtubepot-bgutilscript": {"server_home": "/opt/bgutil/server"},
+            },
+        }
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            ydl.extract_info("https://www.youtube.com/watch?v=dQw4w9WgXcQ", download=False)
+        result["test_extract"] = "success"
+    except Exception as e:
+        err = str(e)
+        result["test_extract_error"] = err[:500]
+        if "Sign in" in err:
+            result["bot_detected"] = True
+
+    return result
+
+
 @router.get("/api/cookies", response_model=CookieStatus)
 async def get_cookie_status():
     exists = COOKIES_FILE.exists()
