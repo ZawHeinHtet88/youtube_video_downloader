@@ -14,20 +14,7 @@ async def lifespan(app: FastAPI):
     import yt_dlp
     log.info("yt-dlp version: %s", yt_dlp.version.__version__)
     log.info("Cookies file: %s", settings.download_dir / "cookies.txt")
-
-    try:
-        from app.services.ytdlp import start_pot_server
-        start_pot_server()
-    except Exception as e:
-        log.warning("Failed to start PO token server: %s", e)
-
     yield
-
-    try:
-        from app.services.ytdlp import stop_pot_server
-        stop_pot_server()
-    except Exception:
-        pass
 
 
 app = FastAPI(
