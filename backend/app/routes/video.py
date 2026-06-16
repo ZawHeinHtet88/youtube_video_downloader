@@ -26,7 +26,11 @@ COOKIES_FILE = settings.download_dir / "cookies.txt"
 
 @router.get("/health")
 async def health():
-    return {"status": "ok"}
+    import yt_dlp
+    return {
+        "status": "ok",
+        "ytdlp_version": yt_dlp.version.__version__,
+    }
 
 
 @router.get("/api/cookies", response_model=CookieStatus)
