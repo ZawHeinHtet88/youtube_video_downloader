@@ -124,6 +124,10 @@ def _parse_formats(info: dict) -> VideoInfoResponse:
             continue
         seen.add(key)
 
+        fmt_url = f.get("url", "")
+        if not fmt_url:
+            continue
+
         formats.append(VideoFormat(
             format_id=fid,
             ext=ext,
@@ -133,6 +137,7 @@ def _parse_formats(info: dict) -> VideoInfoResponse:
             acodec=acodec if acodec != "none" else None,
             filesize_approx=filesize,
             label=label,
+            url=fmt_url,
         ))
 
     def _sort_key(fmt: VideoFormat) -> tuple:

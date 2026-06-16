@@ -14,6 +14,7 @@ class VideoFormat(BaseModel):
     acodec: str | None = None
     filesize_approx: int | None = None
     label: str
+    url: str
 
 
 class VideoInfoResponse(BaseModel):

@@ -2,7 +2,6 @@ import React from "react";
 import { View, Text, Image, StyleSheet } from "react-native";
 import { ActiveDownload } from "../../store/downloadStore";
 import { ProgressBar } from "../../shared/components/ProgressBar";
-import { formatSpeed, formatETA } from "../../shared/utils/format";
 
 interface Props {
   download: ActiveDownload;
@@ -10,7 +9,6 @@ interface Props {
 
 const STATUS_COLORS: Record<string, string> = {
   downloading: "#4ade80",
-  merging: "#facc15",
   completed: "#22d3ee",
   failed: "#f87171",
   cancelled: "#a78bfa",
@@ -33,12 +31,7 @@ export function DownloadCard({ download }: Props) {
 
         <View style={styles.meta}>
           <Text style={[styles.status, { color }]}>{download.status}</Text>
-          {download.speed != null && (
-            <Text style={styles.speed}>{formatSpeed(download.speed)}</Text>
-          )}
-          {download.eta != null && (
-            <Text style={styles.eta}>ETA {formatETA(download.eta)}</Text>
-          )}
+          <Text style={styles.percent}>{Math.round(download.percent)}%</Text>
         </View>
       </View>
     </View>
@@ -58,6 +51,5 @@ const styles = StyleSheet.create({
   title: { color: "#eee", fontSize: 14, fontWeight: "500", marginBottom: 6 },
   meta: { flexDirection: "row", marginTop: 4, gap: 10 },
   status: { fontSize: 12, fontWeight: "600" },
-  speed: { color: "#888", fontSize: 12 },
-  eta: { color: "#888", fontSize: 12 },
+  percent: { color: "#888", fontSize: 12 },
 });

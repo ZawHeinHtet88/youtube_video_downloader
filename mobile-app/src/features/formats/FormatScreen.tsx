@@ -19,7 +19,7 @@ type Props = {
 
 export function FormatScreen({ navigation }: Props) {
   const { videoInfo, videoUrl, selectedFormat, setSelectedFormat } = useStore();
-  const { start, monitorProgress } = useDownload();
+  const { start } = useDownload();
 
   if (!videoInfo) {
     return (
@@ -31,8 +31,13 @@ export function FormatScreen({ navigation }: Props) {
 
   const handleDownload = async (fmt: VideoFormat) => {
     setSelectedFormat(fmt);
-    const taskId = await start(videoUrl, fmt.format_id, videoInfo.title, videoInfo.thumbnail);
-    monitorProgress(taskId);
+    await start(
+      fmt.url,
+      videoInfo.title,
+      videoInfo.thumbnail,
+      fmt.format_id,
+      fmt.ext
+    );
     navigation.navigate("Downloads");
   };
 
