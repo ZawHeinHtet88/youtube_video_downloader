@@ -1,5 +1,3 @@
-FROM brainicism/bgutil-ytdlp-pot-provider:node AS potserver
-
 FROM python:3.12-slim
 
 WORKDIR /app
@@ -8,16 +6,14 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends ffmpeg && \
     rm -rf /var/lib/apt/lists/*
 
-COPY --from=potserver /app /opt/bgutil/server
-
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir --upgrade yt-dlp && \
-    pip install --no-cache-dir bgutil-ytdlp-pot-provider
+    pip install --no-cache-dir --upgrade yt-dlp
 
 COPY . .
-RUN chmod +x entrypoint.sh && mkdir -p /app/downloads
+
+RUN mkdir -p /app/downloads
 
 EXPOSE 8000
 
-CMD ["./entrypoint.sh"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
