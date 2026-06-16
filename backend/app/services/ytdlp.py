@@ -1,5 +1,7 @@
 import asyncio
 import re
+import shutil
+import tempfile
 from pathlib import Path
 
 import yt_dlp
@@ -31,6 +33,13 @@ def _has_cookies() -> bool:
     return COOKIES_FILE.exists() and COOKIES_FILE.stat().st_size > 100
 
 
+def _get_writable_cookies() -> str:
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".txt", dir=str(settings.download_dir))
+    shutil.copy2(COOKIES_FILE, tmp.name)
+    tmp.close()
+    return tmp.name
+
+
 def _get_opts(clients: list[str] | None = None) -> dict:
     opts = {
         "quiet": True,
@@ -43,7 +52,7 @@ def _get_opts(clients: list[str] | None = None) -> dict:
         },
     }
     if _has_cookies():
-        opts["cookiefile"] = str(COOKIES_FILE)
+        opts["cookiefile"] = _get_writable_cookies()
     elif clients:
         opts["extractor_args"] = {"youtube": {"player_client": clients}}
     return opts
@@ -53,10 +62,12 @@ async def extract_info(url: str) -> VideoInfoResponse:
     url = _clean_url(url)
 
     if _has_cookies():
+        cookie_path = _get_writable_cookies()
         try:
             def _extract():
                 opts = _get_opts()
                 opts["skip_download"] = True
+                opts["cookiefile"] = cookie_path
                 with yt_dlp.YoutubeDL(opts) as ydl:
                     return ydl.extract_info(url, download=False)
             info = await asyncio.to_thread(_extract)
@@ -64,6 +75,8 @@ async def extract_info(url: str) -> VideoInfoResponse:
         except Exception as e:
             if "Sign in to confirm" not in str(e):
                 raise
+        finally:
+            Path(cookie_path).unlink(missing_ok=True)
 
     last_error = None
     for client_combo in PLAYER_CLIENTS:
@@ -187,6 +200,7 @@ async def download_video(
     fmt_str = f"{format_id}+bestaudio/best" if format_id != "best" else "best"
 
     if _has_cookies():
+        cookie_path = _get_writable_cookies()
         opts = _get_opts()
         opts.update({
             "format": fmt_str,
@@ -194,6 +208,7 @@ async def download_video(
             "merge_output_format": "mp4",
             "progress_hooks": [progress_hook],
         })
+        opts["cookiefile"] = cookie_path
         await _emit("extracting", percent=0)
         result_file: str = ""
         try:
@@ -215,6 +230,8 @@ async def download_video(
             if "Sign in to confirm" not in str(e):
                 await _emit("failed", error=str(e))
                 raise
+        finally:
+            Path(cookie_path).unlink(missing_ok=True)
 
     last_error = None
     for client_combo in PLAYER_CLIENTS:
