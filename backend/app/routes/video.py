@@ -59,21 +59,42 @@ async def debug():
     # Test: yt-dlp via subprocess with verbose
     try:
         import subprocess
+
+        # First check plugin paths
+        r0 = subprocess.run(
+            ["python", "-c", "import yt_dlp; print(yt_dlp.__path__)"],
+            capture_output=True, text=True, timeout=10,
+        )
+        result["yt_dlp_path"] = r0.stdout.strip()
+
+        r1 = subprocess.run(
+            ["python", "-c", "from importlib.metadata import distributions; print([d._path for d in distributions() if 'bgutil' in str(d._path)])"],
+            capture_output=True, text=True, timeout=10,
+        )
+        result["bgutil_pkg"] = r1.stdout.strip()[:500]
+
+        r2 = subprocess.run(
+            ["find", "/usr", "-name", "getpot_bgutil*", "-type", "f"],
+            capture_output=True, text=True, timeout=10,
+        )
+        result["find_bgutil"] = r2.stdout.strip()[:500]
+
         r = subprocess.run(
             [
                 "python", "-m", "yt_dlp",
                 "--verbose",
                 "--skip-download",
                 "--force-ipv4",
-                "--extractor-args", "youtube:player_client=web;youtubepot-bgutilscript:server_home=/opt/bgutil/server",
+                "--extractor-args", "youtube:player_client=web",
+                "--extractor-args", "youtubepot-bgutilscript:server_home=/opt/bgutil/server",
                 "--list-formats",
                 "https://www.youtube.com/watch?v=nwVmxz44c1Y",
             ],
             capture_output=True, text=True, timeout=60,
         )
         result["subprocess_returncode"] = r.returncode
-        result["subprocess_stdout"] = r.stdout[-1500:] if r.stdout else ""
-        result["subprocess_stderr"] = r.stderr[-1500:] if r.stderr else ""
+        result["subprocess_stdout"] = r.stdout[-2000:] if r.stdout else ""
+        result["subprocess_stderr"] = r.stderr[-2000:] if r.stderr else ""
     except Exception as e:
         result["subprocess_error"] = str(e)[:300]
 
