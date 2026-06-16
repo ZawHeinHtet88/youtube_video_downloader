@@ -60,7 +60,6 @@ async def debug():
     try:
         import subprocess
         import time
-        import threading
 
         # Start HTTP server in background
         server_proc = subprocess.Popen(
@@ -69,7 +68,7 @@ async def debug():
         )
         time.sleep(3)
 
-        # Test with HTTP provider
+        # Test with HTTP provider (default port auto-detected)
         r = subprocess.run(
             [
                 "python", "-m", "yt_dlp",
@@ -77,6 +76,7 @@ async def debug():
                 "--skip-download",
                 "--force-ipv4",
                 "--extractor-args", "youtube:player_client=web",
+                "--extractor-args", "youtubepot-bgutilhttp:base_url=http://127.0.0.1:4416",
                 "--list-formats",
                 "https://www.youtube.com/watch?v=nwVmxz44c1Y",
             ],
