@@ -30,8 +30,11 @@ def on_startup():
     log.info("yt-dlp version: %s", yt_dlp.version.__version__)
     log.info("Cookies file: %s", settings.download_dir / "cookies.txt")
 
-    from app.services.ytdlp import start_pot_server
-    start_pot_server()
+    try:
+        from app.services.ytdlp import start_pot_server
+        start_pot_server()
+    except Exception as e:
+        log.warning("Failed to start PO token server: %s", e)
 
 
 @app.on_event("shutdown")
