@@ -1,13 +1,18 @@
 import asyncio
+import logging
 import re
 import shutil
+import subprocess
 import tempfile
+import time
 from pathlib import Path
 
 import yt_dlp
 
 from app.config import settings
 from app.models import VideoFormat, VideoInfoResponse
+
+log = logging.getLogger("idm.ytdlp")
 
 PLAYER_CLIENTS = [
     ["web", "mweb", "tv"],
@@ -19,6 +24,43 @@ PLAYER_CLIENTS = [
 ]
 
 COOKIES_FILE = settings.download_dir / "cookies.txt"
+
+_pot_server_proc: subprocess.Popen | None = None
+
+
+def start_pot_server():
+    global _pot_server_proc
+    server_js = Path("/opt/bgutil/server/build/main.js")
+    if not server_js.exists():
+        log.warning("bgutil server not found at %s", server_js)
+        return
+    try:
+        _pot_server_proc = subprocess.Popen(
+            ["node", str(server_js), "--port", "4416"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        time.sleep(2)
+        if _pot_server_proc.poll() is None:
+            log.info("bgutil HTTP server started on port 4416 (pid=%d)", _pot_server_proc.pid)
+        else:
+            log.error("bgutil HTTP server failed to start (rc=%d)", _pot_server_proc.returncode)
+            _pot_server_proc = None
+    except Exception as e:
+        log.error("Failed to start bgutil HTTP server: %s", e)
+        _pot_server_proc = None
+
+
+def stop_pot_server():
+    global _pot_server_proc
+    if _pot_server_proc and _pot_server_proc.poll() is None:
+        _pot_server_proc.terminate()
+        try:
+            _pot_server_proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            _pot_server_proc.kill()
+        log.info("bgutil HTTP server stopped")
+    _pot_server_proc = None
 
 
 def _clean_url(url: str) -> str:
@@ -46,11 +88,6 @@ def _get_opts(clients: list[str] | None = None) -> dict:
         "no_warnings": True,
         "noplaylist": True,
         "force_ipv4": True,
-        "js_runtimes": {"node": {"cmd": ["node"]}},
-        "extractor_args": {
-            "youtube": {"player_client": clients or ["web"]},
-            "youtubepot-bgutilscript": {"server_home": "/opt/bgutil/server"},
-        },
     }
     if _has_cookies():
         opts["cookiefile"] = str(COOKIES_FILE)
@@ -59,6 +96,7 @@ def _get_opts(clients: list[str] | None = None) -> dict:
             "Accept-Language": "en-US,en;q=0.9",
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
         }
+        opts["extractor_args"] = {"youtube": {"player_client": clients or ["web"]}}
     return opts
 
 
