@@ -56,39 +56,44 @@ async def debug():
     except Exception as e:
         result["pot_check_error"] = str(e)
 
-    # Test: run bgutil script directly with node
+    # Test: start bgutil HTTP server and use HTTP provider
     try:
         import subprocess
-        r = subprocess.run(
-            ["node", "/opt/bgutil/server/build/main.js", "--version"],
-            capture_output=True, text=True, timeout=10,
-        )
-        result["bgutil_script_test"] = {"stdout": r.stdout.strip()[:500], "stderr": r.stderr.strip()[:500], "rc": r.returncode}
-    except Exception as e:
-        result["bgutil_script_error"] = str(e)[:300]
+        import time
+        import threading
 
-    # Test: yt-dlp with explicit js-runtimes and verbose
-    try:
-        import subprocess
+        # Start HTTP server in background
+        server_proc = subprocess.Popen(
+            ["node", "/opt/bgutil/server/build/main.js", "--port", "4416"],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        )
+        time.sleep(3)
+
+        # Test with HTTP provider
         r = subprocess.run(
             [
                 "python", "-m", "yt_dlp",
                 "--verbose",
                 "--skip-download",
                 "--force-ipv4",
-                "--js-runtimes", "node",
                 "--extractor-args", "youtube:player_client=web",
-                "--extractor-args", "youtubepot-bgutilscript:server_home=/opt/bgutil/server",
                 "--list-formats",
                 "https://www.youtube.com/watch?v=nwVmxz44c1Y",
             ],
             capture_output=True, text=True, timeout=90,
         )
-        result["subprocess_returncode"] = r.returncode
-        result["subprocess_stdout"] = r.stdout[-2000:] if r.stdout else ""
-        result["subprocess_stderr"] = r.stderr[-3000:] if r.stderr else ""
+        result["http_server_test"] = {
+            "returncode": r.returncode,
+            "stdout": r.stdout[-2000:] if r.stdout else "",
+            "stderr": r.stderr[-3000:] if r.stderr else "",
+        }
+        server_proc.terminate()
     except Exception as e:
-        result["subprocess_error"] = str(e)[:300]
+        result["http_server_error"] = str(e)[:300]
+        try:
+            server_proc.terminate()
+        except:
+            pass
 
     # Test 2: With cookies
     from app.services.ytdlp import COOKIES_FILE, _get_writable_cookies
