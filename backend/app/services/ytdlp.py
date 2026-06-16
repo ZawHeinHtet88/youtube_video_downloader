@@ -46,15 +46,15 @@ def _get_opts(clients: list[str] | None = None) -> dict:
         "no_warnings": True,
         "noplaylist": True,
         "force_ipv4": True,
-        "http_headers": {
-            "Accept-Language": "en-US,en;q=0.9",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
-        },
     }
     if _has_cookies():
-        opts["cookiefile"] = _get_writable_cookies()
-    elif clients:
-        opts["extractor_args"] = {"youtube": {"player_client": clients}}
+        opts["cookiefile"] = str(COOKIES_FILE)
+    else:
+        opts["http_headers"] = {
+            "Accept-Language": "en-US,en;q=0.9",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
+        }
+        opts["extractor_args"] = {"youtube": {"player_client": clients or ["web"]}}
     return opts
 
 
