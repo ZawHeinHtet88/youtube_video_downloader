@@ -3,15 +3,12 @@ FROM python:3.12-slim
 WORKDIR /app
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ffmpeg curl && \
-    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
-    apt-get install -y --no-install-recommends nodejs && \
+    apt-get install -y --no-install-recommends ffmpeg && \
     rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir --upgrade yt-dlp && \
-    pip install --no-cache-dir bgutil-ytdlp-pot-provider
+    pip install --no-cache-dir --upgrade yt-dlp
 
 COPY . .
 
