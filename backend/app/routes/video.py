@@ -69,7 +69,7 @@ async def debug():
             },
         }
         with yt_dlp.YoutubeDL(opts) as ydl:
-            info = ydl.extract_info("https://www.youtube.com/watch?v=dQw4w9WgXcQ", download=False)
+            info = ydl.extract_info("https://www.youtube.com/watch?v=nwVmxz44c1Y", download=False)
         result["test_no_cookies"] = f"SUCCESS: {info.get('title', '')[:50]}"
     except Exception as e:
         err = str(e)
@@ -92,7 +92,7 @@ async def debug():
                 },
             }
             with yt_dlp.YoutubeDL(opts) as ydl:
-                info = ydl.extract_info("https://www.youtube.com/watch?v=dQw4w9WgXcQ", download=False)
+                info = ydl.extract_info("https://www.youtube.com/watch?v=nwVmxz44c1Y", download=False)
             result["test_with_cookies"] = f"SUCCESS: {info.get('title', '')[:50]}"
         except Exception as e:
             err = str(e)
